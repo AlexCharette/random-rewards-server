@@ -11,29 +11,31 @@ import (
 
 // TODO Define expected inputs and outputs
 
-func getReward(name string) (reward *Reward, err error) {
+func getReward(name string) (resultJson string, err error) {
+
+	// TODO Take JSON from param
+
 	filter := bson.D{{"name", name}}
 
 	var result Reward
 	err = Rewards.FindOne(context.TODO(), filter).Decode(&result)
 	if err == mongo.ErrNoDocuments {
 		fmt.Printf("No document found with the name %s\n", name)
-		return nil, err
+		return "", err
 	}
 	if err != nil {
 		panic(err)
 	}
 
-	// jsonData, err := json.MarshalIndent(result, "", "    ")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Printf("%s\n", jsonData)
+	jsonData, err := json.Marshal(result)
+	if err != nil {
+		panic(err)
+	}
 
-	return &result, err
+	return string(jsonData), err
 }
 
-func addReward(rewardJson string) (reward *Reward, err error) {
+func addReward(rewardJson string) (resultJson string, err error) {
 	var newReward Reward
 	// TODO Handle errors
 	json.Unmarshal([]byte(rewardJson), &newReward)
@@ -48,10 +50,15 @@ func addReward(rewardJson string) (reward *Reward, err error) {
 		panic(err)
 	}
 
-	return &result, err
+	jsonData, err := json.Marshal(result)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(jsonData), err
 }
 
-func updateReward(rewardJason string) {
+func updateReward(rewardJason string) (resultJson string, err error) {
 	var updatedReward Reward
 	json.Unmarshal([]byte(rewardJason), &updatedReward)
 	filter := bson.D{
@@ -71,9 +78,16 @@ func updateReward(rewardJason string) {
 	if err != nil {
 		panic(err)
 	}
+
+	jsonData, err := json.Marshal(result)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(jsonData), err
 }
 
-func deleteReward(id string) {
+func deleteReward(id string) (resultJson string, err error) {
 	filter := bson.D{
 		{"_id", id},
 	}
@@ -81,4 +95,11 @@ func deleteReward(id string) {
 	if err != nil {
 		panic(err)
 	}
+
+	jsonData, err := json.Marshal(result)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(jsonData), err
 }
