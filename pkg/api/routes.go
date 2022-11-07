@@ -11,16 +11,11 @@ import (
 
 // TODO Define expected inputs and outputs
 
-func getReward(name string) (resultJson string, err error) {
+func getRewards() (resultJson string, err error) {
 
-	// TODO Take JSON from param
-
-	filter := bson.D{{"name", name}}
-
-	var result Reward
-	err = Rewards.FindOne(context.TODO(), filter).Decode(&result)
+	result, err := Rewards.Find(context.TODO(), bson.D{})
 	if err == mongo.ErrNoDocuments {
-		fmt.Printf("No document found with the name %s\n", name)
+		fmt.Println("No documents found in the collection")
 		return "", err
 	}
 	if err != nil {
