@@ -13,5 +13,7 @@ func main() {
 		log.Println("No .env file found")
 	}
 
-	api.Run()
+	app := api.App{}
+	app.Initialize()
+	app.Run()
 }
