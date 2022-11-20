@@ -3,98 +3,160 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// TODO Define expected inputs and outputs
+/*
+Returned payload:
+JSON string containing:
 
-func getRewards() (resultJson string, err error) {
+	  _id: string,
+		name: string,
+		icon: string,
+		comment: string,
+*/
+func (app *App) getRewards(c *gin.Context) {
 
-	result, err := Rewards.Find(context.TODO(), bson.D{})
+	cursor, err := Rewards.Find(context.TODO(), bson.D{})
 	if err == mongo.ErrNoDocuments {
-		fmt.Println("No documents found in the collection")
-		return "", err
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "no rewards found"})
+		return
 	}
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		panic(err)
+	}
+
+	var rewards []Reward
+
+	if err = cursor.All(context.TODO(), &rewards); err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		panic(err)
+	}
+
+	jsonData, err := json.Marshal(rewards)
 	if err != nil {
 		panic(err)
 	}
 
-	jsonData, err := json.Marshal(result)
-	if err != nil {
-		panic(err)
-	}
-
-	return string(jsonData), err
+	c.IndentedJSON(http.StatusOK, string(jsonData))
 }
 
-func addReward(rewardJson string) (resultJson string, err error) {
-	var newReward Reward
-	// TODO Handle errors
-	json.Unmarshal([]byte(rewardJson), &newReward)
+/*
+Expected payload:
+JSON string containing:
+
+	name: string,
+	icon: string,
+	comment: string,
+*/
+func (app *App) createReward(c *gin.Context) {
+	var newReward NewReward
+
+	// json.Unmarshal([]byte(rewardJson), &newReward)
+	err := c.BindJSON(&newReward)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
 	doc := bson.D{
-		{"name", newReward.Name},
-		{"comment", newReward.Comment},
-		{"icon", newReward.Icon},
+		{Key: "name", Value: newReward.Name},
+		{Key: "icon", Value: newReward.Icon},
+		{Key: "comment", Value: newReward.Comment},
 	}
 
 	result, err := Rewards.InsertOne(context.TODO(), doc)
 	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		panic(err)
 	}
 
 	jsonData, err := json.Marshal(result)
 	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		panic(err)
 	}
 
-	return string(jsonData), err
+	c.IndentedJSON(http.StatusCreated, string(jsonData))
 }
 
-func updateReward(rewardJason string) (resultJson string, err error) {
-	var updatedReward Reward
-	json.Unmarshal([]byte(rewardJason), &updatedReward)
-	filter := bson.D{
-		{"_id", updatedReward.ID},
+/*
+Expected payload:
+JSON string containing:
+
+	  id: string,
+		name: string,
+		icon: string,
+		comment: string,
+*/
+func (app *App) updateReward(c *gin.Context) {
+	id, err := primitive.ObjectIDFromHex(c.Query("id"))
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		panic(err)
 	}
+
+	var updatedReward Reward
+
+	// json.Unmarshal([]byte(rewardJson), &updatedReward)
+	err = c.BindJSON(&updatedReward)
+	if err != nil {
+		return
+	}
+
 	// TODO Optimize by only updating changed fields
 	update := bson.D{
 		{
 			"$set", bson.D{
-				{"name", updatedReward.Name},
-				{"comment", updatedReward.Comment},
-				{"icon", updatedReward.Icon},
+				{Key: "name", Value: updatedReward.Name},
+				{Key: "icon", Value: updatedReward.Icon},
+				{Key: "comment", Value: updatedReward.Comment},
 			},
 		},
 	}
-	result, err := Rewards.UpdateOne(context.TODO(), filter, update)
+	result, err := Rewards.UpdateOne(context.TODO(), bson.M{"_id": id}, update)
 	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		panic(err)
 	}
 
 	jsonData, err := json.Marshal(result)
 	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		panic(err)
 	}
 
-	return string(jsonData), err
+	c.IndentedJSON(http.StatusOK, string(jsonData))
 }
 
-func deleteReward(id string) (resultJson string, err error) {
-	filter := bson.D{
-		{"_id", id},
-	}
-	result, err := Rewards.DeleteOne(context.TODO(), filter)
+/*
+Expected payload:
+String representing an ID
+*/
+func (app *App) deleteReward(c *gin.Context) {
+	id, err := primitive.ObjectIDFromHex(c.Query("id"))
 	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		panic(err)
+	}
+
+	result, err := Rewards.DeleteOne(context.TODO(), bson.M{"_id": id})
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		panic(err)
 	}
 
 	jsonData, err := json.Marshal(result)
 	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		panic(err)
 	}
 
-	return string(jsonData), err
+	c.IndentedJSON(http.StatusOK, string(jsonData))
 }
