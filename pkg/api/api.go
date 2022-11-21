@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/event"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -44,7 +45,7 @@ func (app *App) Initialize() {
 
 	Rewards = app.DBClient.Database(os.Getenv("DB_NAME")).Collection("rewards")
 
-	app.initializeRoutes()
+	app.initializeRouter()
 }
 
 func (app *App) Run() {
@@ -58,8 +59,9 @@ func (app *App) Run() {
 	}()
 }
 
-func (app *App) initializeRoutes() {
+func (app *App) initializeRouter() {
 	app.Router = gin.Default()
+	app.Router.Use(cors.Default())
 	app.Router.GET("/rewards", app.getRewards)
 	app.Router.POST("/reward", app.createReward)
 	app.Router.PUT("/reward", app.updateReward)
