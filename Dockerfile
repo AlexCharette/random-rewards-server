@@ -1,21 +1,20 @@
-FROM golang:1.19.3
+FROM golang:alpine AS build
+
+WORKDIR /build
+
+COPY go.mod .
+COPY . .
+
+RUN go build -o random-rewards main.go
+
+FROM alpine
 
 LABEL org.opencontainers.image.source=https://github.com/AlexCharette/random-rewards-server
 
-# TODO: Set a user
+WORKDIR /build
 
-WORKDIR /app
-
-COPY go.mod ./
-COPY go.sum ./
-
-RUN go mod download
-
-COPY *.go ./
-
-RUN go build -o /random-rewards
+COPY --from=build /build/random-rewards /build/random-rewards
 
 EXPOSE 8080
 
-CMD [ "/random-rewards" ]
-
+CMD [ "/build/random-rewards" ]
